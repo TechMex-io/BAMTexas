@@ -12,14 +12,13 @@ import cleanCSS from 'gulp-clean-css';
 import concat from 'gulp-concat';
 import plumber from 'gulp-plumber';
 import browserSync from 'browser-sync';
+import rsync from 'rsyncwrapper';
+import gutil from 'gulp-util';
+import ghPages from 'gulp-gh-pages';
 const reload = browserSync.reload;
 
-/* Init task */
-gulp.task('init', function () {
-  return gulp.src(['scss/slides.scss'])
-    .pipe(concat('custom.scss'))
-    .pipe(gulp.dest('custom/'));
-});
+/* Initial build task */
+gulp.task('build', ['sass', 'hbs', 'scripts', 'assets']);
 
 /* Handllebars */
 gulp.task('hbs', () => {
@@ -51,7 +50,7 @@ gulp.task('scripts', function () {
 });
 
 /* Sass task */
-gulp.task('sass', function () {  
+gulp.task('sass', () => {  
   gulp.src('./src/scss/slides.scss')
     .pipe(sourcemaps.init())
     .pipe(plumber())
@@ -73,34 +72,26 @@ gulp.task('assets', () => {
 });
 
 /* Reload task */
-gulp.task('bs-reload', function () {
+gulp.task('bs-reload', () => {
   browserSync.reload();
 });
 
 /* Prepare Browser-sync for localhost */
-gulp.task('browser-sync', function () {
+gulp.task('browser-sync', () => {
   browserSync.init(['css/*.css', 'js/*.js'], {
-      /*
-      I like to use a vhost, WAMP guide: https://www.kristengrote.com/blog/articles/how-to-set-up-virtual-hosts-using-wamp, XAMP guide: http://sawmac.com/xampp/virtualhosts/
-      */
-      // proxy: 'your_dev_site.url'
-      /* For a static server you would use this: */
-      
-      server: {
-          baseDir: './'
-      }
-      
+    server: {
+      baseDir: './'
+    }
   });
 });
 
-gulp.task('serve', function () {
+gulp.task('serve', () => {
   browserSync.init({
     server: {
       baseDir: './dist'
     }
   });
 });
-
 
 gulp.task('watch', () => {
   /* Watch scss, run the sass task on change. */
@@ -109,7 +100,35 @@ gulp.task('watch', () => {
   gulp.watch(['./src/js/custom.js'], ['scripts'])
   /* Watch .html files, run the bs-reload task on change. */
   gulp.watch(['./src/views/**/*'], ['hbs', 'bs-reload']);
-})
+});
 
 /* Watch scss, js and html files, doing different things with each. */
 gulp.task('default', ['sass', 'watch', 'serve']);
+
+
+
+// Deployment tasks
+gulp.task('deploy', () => {
+  deploySite(process.argv[3]);
+});
+
+const deploySite = (deploymentEnv) => {
+  if (deploymentEnv === '--prod') {
+    rsync({
+      ssh: true,
+      src: './dist/',
+      dest: process.argv[4],
+      recursive: true,
+      syncDest: true,
+      args: ['--verbose']
+    },
+    function (erro, stdout, stderr, cmd) {
+        gutil.log(stdout);
+    });
+  }
+
+  if (deploymentEnv === '--dev') {
+    gulp.src('./dist/**/*')
+      .pipe(ghPages());
+  }
+}
