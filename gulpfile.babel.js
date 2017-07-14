@@ -39,6 +39,7 @@ gulp.task('scripts', function () {
     /* Add your JS files here, they will be combined in this order */
     // 'js/vendor/jquery-1.11.1.js',
     './src/js/slides.min.js',
+    './src/js/fc/fullcalendar.min.js',
     './src/js/custom.js'
   ])
     .pipe(concat('main.js'))
@@ -51,7 +52,7 @@ gulp.task('scripts', function () {
 
 /* Sass task */
 gulp.task('sass', () => {  
-  gulp.src('./src/scss/slides.scss')
+  return gulp.src('./src/scss/slides.scss')
     .pipe(sourcemaps.init())
     .pipe(plumber())
     .pipe(sass().on('error', sass.logError))
@@ -64,7 +65,7 @@ gulp.task('sass', () => {
 });
 
 gulp.task('assets', () => {
-  gulp.src('./src/assets/**/*')
+  return gulp.src('./src/assets/**/*')
     .pipe(plumber())
     .pipe(gulp.dest('./dist/assets'))
     /* Reload the browser CSS after every change */
