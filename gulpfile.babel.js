@@ -12,10 +12,13 @@ import cleanCSS from 'gulp-clean-css';
 import concat from 'gulp-concat';
 import plumber from 'gulp-plumber';
 import browserSync from 'browser-sync';
+const reload = browserSync.reload;
 import rsync from 'rsyncwrapper';
 import gutil from 'gulp-util';
 import ghPages from 'gulp-gh-pages';
-const reload = browserSync.reload;
+import VinylFtp from 'vinyl-ftp';
+import {config} from 'dotenv';
+config();
 
 /* Initial build task */
 gulp.task('build', ['sass', 'hbs', 'scripts', 'assets']);
@@ -118,12 +121,12 @@ const deploySite = (deploymentEnv) => {
     rsync({
       ssh: true,
       src: './dist/',
-      dest: process.argv[4],
+      dest: process.env.SSH,
       recursive: true,
       syncDest: true,
       args: ['--verbose']
     },
-    function (erro, stdout, stderr, cmd) {
+    (erro, stdout, stderr, cmd) => {
         gutil.log(stdout);
     });
   }
@@ -131,5 +134,21 @@ const deploySite = (deploymentEnv) => {
   if (deploymentEnv === '--dev') {
     gulp.src('./dist/**/*')
       .pipe(ghPages());
+  }
+
+  if (deploymentEnv === '--ftp') {
+    var conn = VinylFtp.create({
+      host: process.env.HOST,
+      user: process.env.USERNAME,
+      password: process.env.PASS,
+      parallel: 10,
+      log: gutil.log
+    });
+    var globs = [
+      './dist/**/*'
+    ];
+    gulp.src(globs, {base: './dist', buffer: false})
+      .pipe(conn.newer('/'))
+      .pipe(conn.dest('/'));
   }
 }
